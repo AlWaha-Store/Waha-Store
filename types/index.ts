@@ -1,3 +1,6 @@
+// ============================================
+// الملف: types/index.ts (تحديث)
+// ============================================
 export interface Product {
   id: number;
   name: string;
@@ -20,6 +23,8 @@ export interface Order {
   items: CartItem[];
   total: number;
   date: string;
+  notes?: string;
+  paymentMethod?: string;
 }
 
-export type FilterType = 'الكل' | 'فاكهة' | 'خضروات' | 'عروض';
+export type FilterType = 'الكل' | 'فاكهة' | 'خضروات' | 'عروض'; 
