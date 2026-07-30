@@ -1,5 +1,5 @@
 // ============================================
-// الملف: app/page.tsx
+// الملف: app/page.tsx (الإصدار المعدل بالكامل)
 // ============================================
 'use client'
 import { useState, useEffect } from 'react'
@@ -29,7 +29,6 @@ const countries = [
   { code: '+249', name: '🇸🇩 السودان' },
   { code: '+252', name: '🇸🇴 الصومال' },
   { code: '+253', name: '🇩🇯 جيبوتي' },
-  { code: '+297', name: '🇦🇼 أروبا' },
 ]
 
 export default function Home() {
@@ -78,7 +77,6 @@ export default function Home() {
     } else {
       setCart([...cart, { ...product, weight: 1 }])
     }
-    setShowPreview(false)
   }
 
   const addWithQuantity = (product: any, qty: number) => {
@@ -125,14 +123,24 @@ export default function Home() {
     return customerName.trim() !== '' && customerPhone.trim() !== ''
   }
 
+  // ========== دالة إرسال الطلب للواتساب ==========
   const sendOrder = async () => {
     if (!isFormValid()) {
-      alert('الرجاء ملئ الاسم ورقم الجوال')
+      alert('⚠️ الرجاء ملئ الاسم ورقم الجوال')
       return
     }
 
-    const fullPhone = countryCode + customerPhone
+    // تنظيف رقم الجوال (إزالة المسافات والشرطات)
+    let cleanPhone = customerPhone.replace(/[\s\-\(\)]/g, '')
+    
+    // التأكد من أن الرقم يبدأ برقم وليس بعلامة +
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = cleanPhone.substring(1)
+    }
 
+    const fullPhone = countryCode + cleanPhone
+
+    // ===== بناء رسالة واتساب =====
     let message = `🛒 *فاتورة شراء - الواحة 🌱*\n`
     message += `═══════════════════════════════\n\n`
     message += `👤 *العميل:* ${customerName}\n`
@@ -159,7 +167,7 @@ export default function Home() {
     message += `\n═══════════════════════════════\n`
     message += `شكراً لتسوقك من الواحة 🌱`
 
-    // حفظ الطلب
+    // حفظ الطلب في الـ API
     try {
       await fetch('/api/orders', {
         method: 'POST',
@@ -178,11 +186,23 @@ export default function Home() {
       console.error('Error saving order:', error)
     }
 
-    // فتح واتساب
-    const encodedMessage = encodeURIComponent(message)
-    const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '01229156909'
-    window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank')
+    // ===== إرسال للواتساب =====
+    // رقم الواتساب (بدون علامة +)
+    const whatsappNumber = '01229156909'
     
+    // تنظيف رقم الواتساب (إزالة أي علامات)
+    const cleanWhatsapp = whatsappNumber.replace(/[\s\-\(\)\+]/g, '')
+    
+    // ترميز الرسالة
+    const encodedMessage = encodeURIComponent(message)
+    
+    // رابط واتساب بالرقم الصحيح
+    const whatsappUrl = `https://wa.me/${cleanWhatsapp}?text=${encodedMessage}`
+    
+    // فتح الرابط في نافذة جديدة
+    window.open(whatsappUrl, '_blank')
+    
+    // تفريغ السلة
     setCart([])
     setShowCheckout(false)
     setCustomerName('')
@@ -260,7 +280,7 @@ export default function Home() {
             </div>
             
             <div className="quantity-selector">
-              <button onClick={() => setQuantity(Math.max(1, quantity - 0.5))}>−</button>
+              <button onClick={() => setQuantity(Math.max(0.5, quantity - 0.5))}>−</button>
               <span>{quantity}</span>
               <button onClick={() => setQuantity(quantity + 0.5)}>+</button>
             </div>
@@ -359,4 +379,4 @@ export default function Home() {
       )}
     </>
   )
-        } 
+    } 
