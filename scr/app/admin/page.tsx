@@ -17,20 +17,36 @@ export default function AdminPage() {
     discount: 0
   })
 
-  useEffect(() => {
-    const savedProducts = localStorage.getItem('admin_products')
-    if (savedProducts) {
-      setProducts(JSON.parse(savedProducts))
-    } else {
+  // جلب المنتجات من API
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch('/api/products')
+      const data = await res.json()
+      setProducts(data)
+    } catch (error) {
+      console.error('Error fetching products:', error)
       setProducts(allProducts)
-      localStorage.setItem('admin_products', JSON.stringify(allProducts))
     }
+  }
 
-    const savedOrders = localStorage.getItem('orders')
-    if (savedOrders) {
-      setOrders(JSON.parse(savedOrders))
+  // جلب الطلبات من API
+  const fetchOrders = async () => {
+    try {
+      const res = await fetch('/api/orders')
+      const data = await res.json()
+      setOrders(data)
+    } catch (error) {
+      console.error('Error fetching orders:', error)
+      setOrders([])
     }
-  }, [])
+  }
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchProducts()
+      fetchOrders()
+    }
+  }, [isLoggedIn])
 
   const handleLogin = () => {
     const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '123456'
@@ -41,7 +57,7 @@ export default function AdminPage() {
     }
   }
 
-  const addProduct = () => {
+  const addProduct = async () => {
     if (!newProduct.name || !newProduct.price) {
       alert('الرجاء إدخال الاسم والسعر')
       return
@@ -50,26 +66,59 @@ export default function AdminPage() {
       ...newProduct as Product,
       id: Date.now(),
     }
-    const updated = [...products, product]
-    setProducts(updated)
-    localStorage.setItem('admin_products', JSON.stringify(updated))
-    setNewProduct({ name: '', category: 'فاكهة', price: 0, emoji: '🍎', offer: false, discount: 0 })
-  }
-
-  const deleteProduct = (id: number) => {
-    if (confirm('هل أنت متأكد من الحذف؟')) {
-      const updated = products.filter(p => p.id !== id)
-      setProducts(updated)
-      localStorage.setItem('admin_products', JSON.stringify(updated))
+    
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add', product })
+      })
+      if (res.ok) {
+        await fetchProducts()
+        setNewProduct({ name: '', category: 'فاكهة', price: 0, emoji: '🍎', offer: false, discount: 0 })
+      }
+    } catch (error) {
+      console.error('Error adding product:', error)
     }
   }
 
-  const updateProductField = (id: number, field: keyof Product, value: any) => {
-    const updated = products.map(p => 
-      p.id === id ? { ...p, [field]: value } : p
-    )
-    setProducts(updated)
-    localStorage.setItem('admin_products', JSON.stringify(updated))
+  const deleteProduct = async (id: number) => {
+    if (confirm('هل أنت متأكد من الحذف؟')) {
+      try {
+        const res = await fetch('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete', id })
+        })
+        if (res.ok) {
+          await fetchProducts()
+        }
+      } catch (error) {
+        console.error('Error deleting product:', error)
+      }
+    }
+  }
+
+  const updateProductField = async (id: number, field: keyof Product, value: any) => {
+    const product = products.find(p => p.id === id)
+    if (!product) return
+    
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'update', 
+          id, 
+          product: { ...product, [field]: value } 
+        })
+      })
+      if (res.ok) {
+        await fetchProducts()
+      }
+    } catch (error) {
+      console.error('Error updating product:', error)
+    }
   }
 
   if (!isLoggedIn) {
@@ -261,4 +310,4 @@ export default function AdminPage() {
       </div>
     </div>
   )
-    } 
+          } 
