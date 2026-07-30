@@ -1,5 +1,5 @@
 // ============================================
-// الملف: app/page.tsx (الإصدار المعدل بالكامل)
+// الملف: app/page.tsx (الإصدار المعدل النهائي)
 // ============================================
 'use client'
 import { useState, useEffect } from 'react'
@@ -130,14 +130,20 @@ export default function Home() {
       return
     }
 
-    // تنظيف رقم الجوال (إزالة المسافات والشرطات)
+    // تنظيف رقم الجوال (إزالة المسافات والشرطات والأقواس)
     let cleanPhone = customerPhone.replace(/[\s\-\(\)]/g, '')
     
-    // التأكد من أن الرقم يبدأ برقم وليس بعلامة +
+    // إزالة أي علامة + موجودة
+    if (cleanPhone.startsWith('+')) {
+      cleanPhone = cleanPhone.substring(1)
+    }
+    
+    // إزالة الصفر الزائد إذا كان الرقم يبدأ بـ 0
     if (cleanPhone.startsWith('0')) {
       cleanPhone = cleanPhone.substring(1)
     }
 
+    // الرقم الكامل مع رمز الدولة
     const fullPhone = countryCode + cleanPhone
 
     // ===== بناء رسالة واتساب =====
@@ -187,17 +193,16 @@ export default function Home() {
     }
 
     // ===== إرسال للواتساب =====
-    // رقم الواتساب (بدون علامة +)
-    const whatsappNumber = '01229156909'
-    
-    // تنظيف رقم الواتساب (إزالة أي علامات)
-    const cleanWhatsapp = whatsappNumber.replace(/[\s\-\(\)\+]/g, '')
+    // رقم الواتساب الخاص بالمحل - بالصيغة الدولية
+    const whatsappNumber = '201229156909' // بدون + وبدون 0
     
     // ترميز الرسالة
     const encodedMessage = encodeURIComponent(message)
     
-    // رابط واتساب بالرقم الصحيح
-    const whatsappUrl = `https://wa.me/${cleanWhatsapp}?text=${encodedMessage}`
+    // رابط واتساب بالصيغة الصحيحة
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`
+    
+    console.log('WhatsApp URL:', whatsappUrl) // للتحقق
     
     // فتح الرابط في نافذة جديدة
     window.open(whatsappUrl, '_blank')
@@ -379,4 +384,4 @@ export default function Home() {
       )}
     </>
   )
-    } 
+      } 
