@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// تخزين مؤقت في الذاكرة
+let ordersCache: any[] = [];
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { customer, phone, address, items, total } = body
     
-    const orders = JSON.parse(localStorage.getItem('orders') || '[]')
     const newOrder = {
       id: Date.now(),
       customer,
@@ -15,8 +17,7 @@ export async function POST(request: NextRequest) {
       total,
       date: new Date().toISOString()
     }
-    orders.push(newOrder)
-    localStorage.setItem('orders', JSON.stringify(orders))
+    ordersCache.push(newOrder)
     
     let message = `🛒 *طلب جديد من الواحة 🌱*\n\n`
     message += `👤 *الاسم:* ${customer}\n`
@@ -45,4 +46,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
-        } 
+}
+
+export async function GET() {
+  try {
+    return NextResponse.json(ordersCache)
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
+  }
+      } 
