@@ -12,19 +12,25 @@ export default function Home() {
   const [customerAddress, setCustomerAddress] = useState<string>('')
   const [customerPhone, setCustomerPhone] = useState<string>('')
 
+  // تحميل السلة من localStorage (client-side فقط)
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart')
-    if (savedCart) {
-      try {
-        setCart(JSON.parse(savedCart))
-      } catch (e) {
-        console.error('Error loading cart:', e)
+    if (typeof window !== 'undefined') {
+      const savedCart = localStorage.getItem('cart')
+      if (savedCart) {
+        try {
+          setCart(JSON.parse(savedCart))
+        } catch (e) {
+          console.error('Error loading cart:', e)
+        }
       }
     }
   }, [])
 
+  // حفظ السلة في localStorage (client-side فقط)
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cart))
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cart', JSON.stringify(cart))
+    }
   }, [cart])
 
   const addToCart = (product: any) => {
@@ -80,21 +86,27 @@ export default function Home() {
     message += `\n*الإجمالي:* ${getTotal()} ج`
     message += `\n\nشكراً لتسوقك من الواحة 🌱`
 
+    // إرسال الطلب عبر API
+    try {
+      await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer: customerName,
+          phone: customerPhone,
+          address: customerAddress,
+          items: cart,
+          total: getTotal()
+        })
+      })
+    } catch (error) {
+      console.error('Error saving order:', error)
+    }
+
+    // فتح واتساب
     const encodedMessage = encodeURIComponent(message)
     const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '01229156909'
     window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank')
-    
-    const orders = JSON.parse(localStorage.getItem('orders') || '[]')
-    orders.push({
-      id: Date.now(),
-      customer: customerName,
-      phone: customerPhone,
-      address: customerAddress,
-      items: cart,
-      total: getTotal(),
-      date: new Date().toISOString()
-    })
-    localStorage.setItem('orders', JSON.stringify(orders))
     
     setCart([])
     setShowCheckout(false)
@@ -247,4 +259,4 @@ export default function Home() {
       )}
     </>
   )
-    } 
+                        } 
