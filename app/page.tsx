@@ -1,18 +1,53 @@
+// ============================================
+// الملف: app/page.tsx
+// ============================================
 'use client'
 import { useState, useEffect } from 'react'
 import { allProducts } from '@/data/products'
 import { CartItem, FilterType } from '@/types'
 
+// الدول العربية
+const countries = [
+  { code: '+20', name: '🇪🇬 مصر' },
+  { code: '+966', name: '🇸🇦 السعودية' },
+  { code: '+971', name: '🇦🇪 الإمارات' },
+  { code: '+962', name: '🇯🇴 الأردن' },
+  { code: '+961', name: '🇱🇧 لبنان' },
+  { code: '+970', name: '🇵🇸 فلسطين' },
+  { code: '+963', name: '🇸🇾 سوريا' },
+  { code: '+964', name: '🇮🇶 العراق' },
+  { code: '+965', name: '🇰🇼 الكويت' },
+  { code: '+974', name: '🇶🇦 قطر' },
+  { code: '+973', name: '🇧🇭 البحرين' },
+  { code: '+968', name: '🇴🇲 عمان' },
+  { code: '+967', name: '🇾🇪 اليمن' },
+  { code: '+218', name: '🇱🇾 ليبيا' },
+  { code: '+216', name: '🇹🇳 تونس' },
+  { code: '+213', name: '🇩🇿 الجزائر' },
+  { code: '+212', name: '🇲🇦 المغرب' },
+  { code: '+222', name: '🇲🇷 موريتانيا' },
+  { code: '+249', name: '🇸🇩 السودان' },
+  { code: '+252', name: '🇸🇴 الصومال' },
+  { code: '+253', name: '🇩🇯 جيبوتي' },
+  { code: '+297', name: '🇦🇼 أروبا' },
+]
+
 export default function Home() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [filter, setFilter] = useState<FilterType>('الكل')
-  const [showCart, setShowCart] = useState<boolean>(false)
   const [showCheckout, setShowCheckout] = useState<boolean>(false)
+  const [showPreview, setShowPreview] = useState<boolean>(false)
+  const [selectedProduct, setSelectedProduct] = useState<any>(null)
+  const [quantity, setQuantity] = useState<number>(1)
+  
+  // بيانات الفاتورة
   const [customerName, setCustomerName] = useState<string>('')
-  const [customerAddress, setCustomerAddress] = useState<string>('')
+  const [countryCode, setCountryCode] = useState<string>('+20')
   const [customerPhone, setCustomerPhone] = useState<string>('')
+  const [customerAddress, setCustomerAddress] = useState<string>('')
+  const [notes, setNotes] = useState<string>('')
+  const [paymentMethod, setPaymentMethod] = useState<string>('كاش')
 
-  // تحميل السلة من localStorage (client-side فقط)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedCart = localStorage.getItem('cart')
@@ -26,7 +61,6 @@ export default function Home() {
     }
   }, [])
 
-  // حفظ السلة في localStorage (client-side فقط)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('cart', JSON.stringify(cart))
@@ -44,6 +78,22 @@ export default function Home() {
     } else {
       setCart([...cart, { ...product, weight: 1 }])
     }
+    setShowPreview(false)
+  }
+
+  const addWithQuantity = (product: any, qty: number) => {
+    const existing = cart.find(item => item.id === product.id)
+    if (existing) {
+      setCart(cart.map(item => 
+        item.id === product.id 
+          ? { ...item, weight: (item.weight || 0) + qty }
+          : item
+      ))
+    } else {
+      setCart([...cart, { ...product, weight: qty }])
+    }
+    setShowPreview(false)
+    setQuantity(1)
   }
 
   const removeFromCart = (id: number) => {
@@ -65,38 +115,63 @@ export default function Home() {
     return allProducts.filter(p => p.category === filter)
   }
 
+  const openPreview = (product: any) => {
+    setSelectedProduct(product)
+    setQuantity(1)
+    setShowPreview(true)
+  }
+
+  const isFormValid = () => {
+    return customerName.trim() !== '' && customerPhone.trim() !== ''
+  }
+
   const sendOrder = async () => {
-    if (!customerName || !customerPhone) {
-      alert('الرجاء إدخال الاسم ورقم الجوال')
+    if (!isFormValid()) {
+      alert('الرجاء ملئ الاسم ورقم الجوال')
       return
     }
 
-    let message = `🛒 *طلب جديد من الواحة 🌱*\n\n`
-    message += `👤 *الاسم:* ${customerName}\n`
+    const fullPhone = countryCode + customerPhone
+
+    let message = `🛒 *فاتورة شراء - الواحة 🌱*\n`
+    message += `═══════════════════════════════\n\n`
+    message += `👤 *العميل:* ${customerName}\n`
     message += `📍 *العنوان:* ${customerAddress || 'غير محدد'}\n`
-    message += `📱 *الجوال:* ${customerPhone}\n\n`
-    message += `*المنتجات:*\n`
+    message += `📱 *الجوال:* ${fullPhone}\n`
+    message += `💳 *طريقة الدفع:* ${paymentMethod}\n\n`
+    message += `📦 *المنتجات:*\n`
+    message += `───────────────────────────────\n`
     
-    cart.forEach(item => {
+    cart.forEach((item, index) => {
       const weight = item.weight || 1
       const totalPrice = item.price * weight
-      message += `- ${item.emoji} ${item.name} (${weight} كجم) = ${totalPrice} ج\n`
+      message += `${index + 1}. ${item.emoji} ${item.name}\n`
+      message += `   الكمية: ${weight} كجم × ${item.price} ج = ${totalPrice} ج\n`
     })
     
-    message += `\n*الإجمالي:* ${getTotal()} ج`
-    message += `\n\nشكراً لتسوقك من الواحة 🌱`
+    message += `───────────────────────────────\n`
+    message += `💰 *الإجمالي:* ${getTotal()} ج\n`
+    
+    if (notes) {
+      message += `\n📝 *ملاحظات:* ${notes}\n`
+    }
+    
+    message += `\n═══════════════════════════════\n`
+    message += `شكراً لتسوقك من الواحة 🌱`
 
-    // إرسال الطلب عبر API
+    // حفظ الطلب
     try {
       await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customer: customerName,
-          phone: customerPhone,
+          phone: fullPhone,
           address: customerAddress,
           items: cart,
-          total: getTotal()
+          total: getTotal(),
+          notes: notes,
+          paymentMethod: paymentMethod
         })
       })
     } catch (error) {
@@ -111,17 +186,20 @@ export default function Home() {
     setCart([])
     setShowCheckout(false)
     setCustomerName('')
-    setCustomerAddress('')
     setCustomerPhone('')
+    setCustomerAddress('')
+    setNotes('')
   }
 
   return (
     <>
-      <header>
+      {/* الهيدر */}
+      <header className="header-main">
         <h1>🌱 الواحة</h1>
         <p>خضروات وفاكهة طازجة يومياً</p>
       </header>
 
+      {/* أزرار التصفية */}
       <div className="filter-buttons">
         {(['الكل', 'فاكهة', 'خضروات', 'عروض'] as FilterType[]).map((f) => (
           <button
@@ -132,11 +210,12 @@ export default function Home() {
             {f === 'الكل' && '🏠 الكل'}
             {f === 'فاكهة' && '🍎 فاكهة'}
             {f === 'خضروات' && '🥬 خضروات'}
-            {f === 'عروض' && '🏷️ عروض حصرية'}
+            {f === 'عروض' && '🏷️ عروض'}
           </button>
         ))}
       </div>
 
+      {/* المنتجات */}
       <div className="products-grid">
         {getFilteredProducts().map(product => (
           <div key={product.id} className="product-card">
@@ -144,82 +223,83 @@ export default function Home() {
             <div className="name">{product.name}</div>
             {product.offer && <span className="offer">خصم {product.discount || 20}%</span>}
             <div className="price">{product.price} ج/كجم</div>
-            <button onClick={() => addToCart(product)}>➕ إضافة</button>
+            <div className="btn-group">
+              <button className="btn-preview" onClick={() => openPreview(product)}>
+                👁️ معاينة
+              </button>
+              <button className="btn-add" onClick={() => addToCart(product)}>
+                ➕ إضافة
+              </button>
+            </div>
           </div>
         ))}
       </div>
 
-      <div className="floating-cart" onClick={() => setShowCart(true)}>
-        <span className="icon">🛒</span>
-        <span className="count">{cart.length}</span>
-      </div>
+      {/* زر الشراء العائم */}
+      {cart.length > 0 && (
+        <button className="floating-buy" onClick={() => setShowCheckout(true)}>
+          <span className="icon">🛒</span>
+          شراء
+          <span className="count">{cart.length}</span>
+        </button>
+      )}
 
-      <div className={`cart-sidebar ${showCart ? 'open' : ''}`}>
-        <span className="close" onClick={() => setShowCart(false)}>✕</span>
-        <h2>🛒 سلة التسوق</h2>
-        
-        {cart.length === 0 ? (
-          <p style={{ textAlign: 'center', marginTop: '30px' }}>السلة فارغة</p>
-        ) : (
-          <>
-            {cart.map(item => (
-              <div key={item.id} className="cart-item">
-                <div>
-                  <div>{item.emoji} {item.name}</div>
-                  <div style={{ fontSize: '0.9rem', color: '#666' }}>
-                    {item.price} ج/كجم
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <input
-                    type="number"
-                    value={item.weight || 1}
-                    onChange={(e) => updateWeight(item.id, parseFloat(e.target.value) || 0)}
-                    min="0.1"
-                    step="0.1"
-                    style={{ width: '60px' }}
-                  />
-                  <span>كجم</span>
-                  <button 
-                    onClick={() => removeFromCart(item.id)}
-                    style={{ background: 'none', border: 'none', color: '#ff6b6b', cursor: 'pointer', fontSize: '1.2rem' }}
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-            ))}
-            
-            <div className="cart-total">
-              الإجمالي: {getTotal()} ج
+      {/* مودال المعاينة */}
+      {showPreview && selectedProduct && (
+        <div className="modal-overlay" onClick={(e) => {
+          if (e.target === e.currentTarget) setShowPreview(false)
+        }}>
+          <div className="modal-content">
+            <button className="close-btn" onClick={() => setShowPreview(false)}>✕</button>
+            <h2>📦 معاينة المنتج</h2>
+            <div className="product-preview">
+              <span className="emoji">{selectedProduct.emoji}</span>
+              <div className="name">{selectedProduct.name}</div>
+              {selectedProduct.offer && <div className="offer">🔥 عرض خاص - خصم {selectedProduct.discount}%</div>}
+              <div className="price">{selectedProduct.price} ج/كجم</div>
             </div>
             
-            <button className="btn-checkout" onClick={() => {
-              setShowCart(false)
-              setShowCheckout(true)
-            }}>
-              شراء الآن
+            <div className="quantity-selector">
+              <button onClick={() => setQuantity(Math.max(1, quantity - 0.5))}>−</button>
+              <span>{quantity}</span>
+              <button onClick={() => setQuantity(quantity + 0.5)}>+</button>
+            </div>
+            <div style={{ textAlign: 'center', fontSize: '0.9rem', color: '#666', marginBottom: '10px' }}>
+              الوزن: {quantity} كجم
+            </div>
+            
+            <button 
+              className="btn-add-to-cart"
+              onClick={() => addWithQuantity(selectedProduct, quantity)}
+            >
+              ➕ إضافة {quantity} كجم للسلة
             </button>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
 
+      {/* مودال الفاتورة */}
       {showCheckout && (
-        <div className="checkout-modal" onClick={(e) => {
+        <div className="modal-overlay checkout-modal" onClick={(e) => {
           if (e.target === e.currentTarget) setShowCheckout(false)
         }}>
           <div className="modal-content">
-            <h2>📋 تأكيد الطلب</h2>
+            <button className="close-btn" onClick={() => setShowCheckout(false)}>✕</button>
+            <h2>🧾 الفاتورة</h2>
             
             <div className="order-summary">
-              <h3>المنتجات:</h3>
               {cart.map(item => (
-                <div key={item.id}>
-                  {item.emoji} {item.name} - {item.weight || 1} كجم = {(item.price * (item.weight || 1))} ج
+                <div key={item.id} className="item">
+                  <span>{item.emoji} {item.name} × {item.weight || 1} كجم</span>
+                  <span>{(item.price * (item.weight || 1))} ج</span>
                 </div>
               ))}
-              <div style={{ fontWeight: 'bold', marginTop: '10px', fontSize: '1.2rem' }}>
-                الإجمالي: {getTotal()} ج
+              <div className="total">
+                <span>الإجمالي</span>
+                <span>{getTotal()} ج</span>
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#999', marginTop: '8px' }}>
+                * لا يشمل قيمة التوصيل
               </div>
             </div>
 
@@ -228,35 +308,55 @@ export default function Home() {
               placeholder="👤 الاسم الكامل *"
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
-              required
+              className={!customerName && customerName !== '' ? 'error' : ''}
             />
+
+            <div className="phone-group">
+              <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)}>
+                {countries.map(c => (
+                  <option key={c.code} value={c.code}>{c.name}</option>
+                ))}
+              </select>
+              <input
+                type="tel"
+                placeholder="رقم الجوال *"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                style={{ flex: 1 }}
+              />
+            </div>
+
             <input
               type="text"
-              placeholder="📍 العنوان"
+              placeholder="📍 العنوان (الشارع، المدينة، المنطقة)"
               value={customerAddress}
               onChange={(e) => setCustomerAddress(e.target.value)}
             />
-            <input
-              type="tel"
-              placeholder="📱 رقم الجوال *"
-              value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-              required
+
+            <textarea
+              placeholder="📝 ملاحظات إضافية (اختياري)"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
             />
 
-            <button className="btn-confirm" onClick={sendOrder}>
-              ✅ تأكيد وإرسال للواتساب
-            </button>
+            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+              <option value="كاش">💵 كاش</option>
+              <option value="انستا باي">📱 انستا باي</option>
+              <option value="محفظة إلكترونية">📱 محفظة إلكترونية</option>
+            </select>
+
             <button 
-              style={{ marginTop: '10px', background: '#ccc', color: '#333' }}
               className="btn-confirm"
-              onClick={() => setShowCheckout(false)}
+              onClick={sendOrder}
+              disabled={!isFormValid()}
             >
-              إلغاء
+              <span className="icon">💰</span>
+              تأكيد الشراء
             </button>
           </div>
         </div>
       )}
     </>
   )
-                                                            } 
+        } 
