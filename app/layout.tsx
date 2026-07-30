@@ -1,3 +1,6 @@
+// ============================================
+// الملف: app/layout.tsx
+// ============================================
 import './globals.css'
 import type { Metadata } from 'next'
 
@@ -13,18 +16,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl">
+      <head>
+        <link 
+          href="https://fonts.googleapis.com/css2?family=Amiri+Quran&display=swap" 
+          rel="stylesheet" 
+        />
+      </head>
       <body>
         {children}
-        <footer style={{ 
-          textAlign: 'center', 
-          padding: '20px', 
-          background: '#f5f5f5', 
-          marginTop: '40px',
-          borderTop: '2px solid #2d7d2d'
-        }}>
-          <p>© 2026 الواحة 🌱 - جميع الحقوق محفوظة</p>
-          <p style={{ fontSize: '0.9rem', color: '#666' }}>خضروات وفاكهة طازجة يومياً</p>
-        </footer>
       </body>
     </html>
   )
